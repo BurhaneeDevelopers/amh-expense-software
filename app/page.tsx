@@ -462,7 +462,7 @@ function DashboardTab({ currentUser, selectedDate, setSelectedDate }: DashboardT
   );
 }
 
-function TransactionsTable({ transactions }) {
+function TransactionsTable({ transactions }: TransactionsTableProps) {
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
