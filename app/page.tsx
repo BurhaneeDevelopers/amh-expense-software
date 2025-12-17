@@ -686,7 +686,7 @@ function ReportsTab({ currentUser, startDate, endDate, setStartDate, setEndDate 
   const [selectedBranchId, setSelectedBranchId] = useState(currentUser.branchId || 'all');
 
   // Fetch branches
-  const { data: branchesData } = useQuery({
+  const { data: branchesData } = useQuery<BranchesResponse>({
     queryKey: ['branches'],
     queryFn: async () => {
       const response = await fetch('/api/branches');
@@ -694,7 +694,7 @@ function ReportsTab({ currentUser, startDate, endDate, setStartDate, setEndDate 
     },
   });
 
-  const branches = branchesData?.branches || [];
+  const branches: Branch[] = branchesData?.branches || [];
 
   // Fetch analytics
   const { data: analyticsData, isLoading } = useQuery({
