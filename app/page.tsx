@@ -289,7 +289,7 @@ function DashboardTab({ currentUser, selectedDate, setSelectedDate }: DashboardT
   // Fetch transactions for selected date and branch
   const selectedBranchId = currentUser.role === 'manager' ? currentUser.branchId : null;
   
-  const { data: transactionsData, isLoading } = useQuery({
+  const { data: transactionsData, isLoading } = useQuery<TransactionsResponse>({
     queryKey: ['transactions', selectedDate, selectedBranchId],
     queryFn: async () => {
       let url = `/api/transactions?startDate=${selectedDate}&endDate=${selectedDate}`;
@@ -301,7 +301,7 @@ function DashboardTab({ currentUser, selectedDate, setSelectedDate }: DashboardT
     },
   });
 
-  const transactions = transactionsData?.transactions || [];
+  const transactions: Transaction[] = transactionsData?.transactions || [];
 
   // Calculate daily totals
   const dailyIncome = transactions
