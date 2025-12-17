@@ -1100,13 +1100,13 @@ function UsersManagement() {
   );
 }
 
-function AddUserDialog({ branches }) {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('manager');
-  const [branchId, setBranchId] = useState('');
+function AddUserDialog({ branches }: AddUserDialogProps) {
+  const [open, setOpen] = useState<boolean>(false);
+  const [name, setName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [role, setRole] = useState<'admin' | 'manager'>('manager');
+  const [branchId, setBranchId] = useState<string>('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
