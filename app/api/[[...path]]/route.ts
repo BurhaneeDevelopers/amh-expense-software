@@ -1,25 +1,34 @@
-import { MongoClient } from 'mongodb';
-import { NextResponse } from 'next/server';
+import { MongoClient, Db } from 'mongodb';
+import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
+import type { 
+  User, 
+  Branch, 
+  Transaction, 
+  UserWithoutPassword,
+  PaymentMethod,
+  ExpenseCategory,
+  TransactionType 
+} from '@/types';
 
-const MONGO_URL = process.env.MONGO_URL;
+const MONGO_URL = process.env.MONGO_URL as string;
 const DB_NAME = 'expense_tracker';
 
-let client;
-let db;
+let client: MongoClient | null = null;
+let db: Db | null = null;
 
-async function connectDB() {
+async function connectDB(): Promise<Db> {
   if (!client) {
     client = new MongoClient(MONGO_URL);
     await client.connect();
     db = client.db(DB_NAME);
   }
-  return db;
+  return db as Db;
 }
 
 // Helper function to parse request body
-async function parseBody(request) {
+async function parseBody<T = any>(request: NextRequest): Promise<T | null> {
   try {
     return await request.json();
   } catch {
@@ -28,18 +37,23 @@ async function parseBody(request) {
 }
 
 // Auth endpoints
-async function handleLogin(request) {
-  const body = await parseBody(request);
+async function handleLogin(request: NextRequest): Promise<NextResponse> {
+  const body = await parseBody<{ email: string; password: string }>(request);
+  
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
   const { email, password } = body;
 
   const db = await connectDB();
-  const user = await db.collection('users').findOne({ email });
+  const user = await db.collection<User>('users').findOne({ email });
 
   if (!user) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
-  const isValid = await bcrypt.compare(password, user.password);
+  const isValid = await bcrypt.compare(password, user.password || '');
   if (!isValid) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
@@ -49,9 +63,9 @@ async function handleLogin(request) {
   return NextResponse.json({ user: userWithoutPassword });
 }
 
-async function handleGetCurrentUser(request, userId) {
+async function handleGetCurrentUser(request: NextRequest, userId: string): Promise<NextResponse> {
   const db = await connectDB();
-  const user = await db.collection('users').findOne({ id: userId });
+  const user = await db.collection<User>('users').findOne({ id: userId });
   
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -62,14 +76,19 @@ async function handleGetCurrentUser(request, userId) {
 }
 
 // Branch endpoints
-async function handleGetBranches() {
+async function handleGetBranches(): Promise<NextResponse> {
   const db = await connectDB();
-  const branches = await db.collection('branches').find({}).sort({ createdAt: -1 }).toArray();
+  const branches = await db.collection<Branch>('branches').find({}).sort({ createdAt: -1 }).toArray();
   return NextResponse.json({ branches });
 }
 
-async function handleCreateBranch(request) {
-  const body = await parseBody(request);
+async function handleCreateBranch(request: NextRequest): Promise<NextResponse> {
+  const body = await parseBody<{ name: string; city: string; location?: string }>(request);
+  
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
   const { name, city, location } = body;
 
   if (!name || !city) {
@@ -77,7 +96,7 @@ async function handleCreateBranch(request) {
   }
 
   const db = await connectDB();
-  const branch = {
+  const branch: Branch = {
     id: uuidv4(),
     name,
     city,
@@ -85,17 +104,22 @@ async function handleCreateBranch(request) {
     createdAt: new Date().toISOString(),
   };
 
-  await db.collection('branches').insertOne(branch);
+  await db.collection<Branch>('branches').insertOne(branch as any);
   return NextResponse.json({ branch });
 }
 
-async function handleUpdateBranch(request, branchId) {
-  const body = await parseBody(request);
+async function handleUpdateBranch(request: NextRequest, branchId: string): Promise<NextResponse> {
+  const body = await parseBody<{ name: string; city: string; location: string }>(request);
+  
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
   const { name, city, location } = body;
 
   const db = await connectDB();
-  const result = await db.collection('branches').updateOne(
-    { id: branchId },
+  const result = await db.collection<Branch>('branches').updateOne(
+    { id: branchId } as any,
     { $set: { name, city, location } }
   );
 
@@ -106,16 +130,16 @@ async function handleUpdateBranch(request, branchId) {
   return NextResponse.json({ success: true });
 }
 
-async function handleDeleteBranch(request, branchId) {
+async function handleDeleteBranch(request: NextRequest, branchId: string): Promise<NextResponse> {
   const db = await connectDB();
   
   // Check if any users are assigned to this branch
-  const usersCount = await db.collection('users').countDocuments({ branchId });
+  const usersCount = await db.collection<User>('users').countDocuments({ branchId } as any);
   if (usersCount > 0) {
     return NextResponse.json({ error: 'Cannot delete branch with assigned users' }, { status: 400 });
   }
 
-  const result = await db.collection('branches').deleteOne({ id: branchId });
+  const result = await db.collection<Branch>('branches').deleteOne({ id: branchId } as any);
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: 'Branch not found' }, { status: 404 });
   }
@@ -124,15 +148,26 @@ async function handleDeleteBranch(request, branchId) {
 }
 
 // User endpoints
-async function handleGetUsers() {
+async function handleGetUsers(): Promise<NextResponse> {
   const db = await connectDB();
-  const users = await db.collection('users').find({}).sort({ createdAt: -1 }).toArray();
+  const users = await db.collection<User>('users').find({}).sort({ createdAt: -1 }).toArray();
   const usersWithoutPasswords = users.map(({ password, ...user }) => user);
   return NextResponse.json({ users: usersWithoutPasswords });
 }
 
-async function handleCreateUser(request) {
-  const body = await parseBody(request);
+async function handleCreateUser(request: NextRequest): Promise<NextResponse> {
+  const body = await parseBody<{ 
+    name: string; 
+    email: string; 
+    password: string; 
+    role: 'admin' | 'manager'; 
+    branchId?: string 
+  }>(request);
+  
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
   const { name, email, password, role, branchId } = body;
 
   if (!name || !email || !password || !role) {
@@ -146,13 +181,13 @@ async function handleCreateUser(request) {
   const db = await connectDB();
   
   // Check if email already exists
-  const existingUser = await db.collection('users').findOne({ email });
+  const existingUser = await db.collection<User>('users').findOne({ email } as any);
   if (existingUser) {
     return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const user = {
+  const user: User = {
     id: uuidv4(),
     name,
     email,
@@ -162,24 +197,35 @@ async function handleCreateUser(request) {
     createdAt: new Date().toISOString(),
   };
 
-  await db.collection('users').insertOne(user);
+  await db.collection<User>('users').insertOne(user as any);
   const { password: _, ...userWithoutPassword } = user;
   return NextResponse.json({ user: userWithoutPassword });
 }
 
-async function handleUpdateUser(request, userId) {
-  const body = await parseBody(request);
+async function handleUpdateUser(request: NextRequest, userId: string): Promise<NextResponse> {
+  const body = await parseBody<{ 
+    name: string; 
+    email: string; 
+    role: 'admin' | 'manager'; 
+    branchId?: string; 
+    password?: string 
+  }>(request);
+  
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
   const { name, email, role, branchId, password } = body;
 
   const db = await connectDB();
-  const updateData = { name, email, role, branchId };
+  const updateData: any = { name, email, role, branchId };
   
   if (password) {
     updateData.password = await bcrypt.hash(password, 10);
   }
 
-  const result = await db.collection('users').updateOne(
-    { id: userId },
+  const result = await db.collection<User>('users').updateOne(
+    { id: userId } as any,
     { $set: updateData }
   );
 
@@ -190,9 +236,9 @@ async function handleUpdateUser(request, userId) {
   return NextResponse.json({ success: true });
 }
 
-async function handleDeleteUser(request, userId) {
+async function handleDeleteUser(request: NextRequest, userId: string): Promise<NextResponse> {
   const db = await connectDB();
-  const result = await db.collection('users').deleteOne({ id: userId });
+  const result = await db.collection<User>('users').deleteOne({ id: userId } as any);
   
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -202,15 +248,15 @@ async function handleDeleteUser(request, userId) {
 }
 
 // Transaction endpoints
-async function handleGetTransactions(request) {
+async function handleGetTransactions(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
   const branchId = searchParams.get('branchId');
   const startDate = searchParams.get('startDate');
   const endDate = searchParams.get('endDate');
-  const type = searchParams.get('type');
+  const type = searchParams.get('type') as TransactionType | null;
 
   const db = await connectDB();
-  const query = {};
+  const query: any = {};
   
   if (branchId) {
     query.branchId = branchId;
@@ -226,7 +272,7 @@ async function handleGetTransactions(request) {
     query.type = type;
   }
 
-  const transactions = await db.collection('transactions')
+  const transactions = await db.collection<Transaction>('transactions')
     .find(query)
     .sort({ date: -1, createdAt: -1 })
     .toArray();
@@ -234,8 +280,22 @@ async function handleGetTransactions(request) {
   return NextResponse.json({ transactions });
 }
 
-async function handleCreateTransaction(request) {
-  const body = await parseBody(request);
+async function handleCreateTransaction(request: NextRequest): Promise<NextResponse> {
+  const body = await parseBody<{
+    type: TransactionType;
+    amount: number;
+    method?: PaymentMethod;
+    category?: ExpenseCategory;
+    note?: string;
+    date: string;
+    userId: string;
+    branchId: string;
+  }>(request);
+  
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
   const { type, amount, method, category, note, date, userId, branchId } = body;
 
   if (!type || !amount || !date || !userId || !branchId) {
@@ -251,10 +311,10 @@ async function handleCreateTransaction(request) {
   }
 
   const db = await connectDB();
-  const transaction = {
+  const transaction: Transaction = {
     id: uuidv4(),
     type,
-    amount: parseFloat(amount),
+    amount: parseFloat(amount.toString()),
     method: method || null,
     category: category || null,
     note: note || '',
@@ -264,26 +324,38 @@ async function handleCreateTransaction(request) {
     createdAt: new Date().toISOString(),
   };
 
-  await db.collection('transactions').insertOne(transaction);
+  await db.collection<Transaction>('transactions').insertOne(transaction as any);
   return NextResponse.json({ transaction });
 }
 
-async function handleUpdateTransaction(request, transactionId) {
-  const body = await parseBody(request);
+async function handleUpdateTransaction(request: NextRequest, transactionId: string): Promise<NextResponse> {
+  const body = await parseBody<{
+    type: TransactionType;
+    amount: number;
+    method?: PaymentMethod;
+    category?: ExpenseCategory;
+    note?: string;
+    date: string;
+  }>(request);
+  
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
   const { type, amount, method, category, note, date } = body;
 
   const db = await connectDB();
-  const updateData = {
+  const updateData: any = {
     type,
-    amount: parseFloat(amount),
+    amount: parseFloat(amount.toString()),
     method,
     category,
     note,
     date,
   };
 
-  const result = await db.collection('transactions').updateOne(
-    { id: transactionId },
+  const result = await db.collection<Transaction>('transactions').updateOne(
+    { id: transactionId } as any,
     { $set: updateData }
   );
 
@@ -294,9 +366,9 @@ async function handleUpdateTransaction(request, transactionId) {
   return NextResponse.json({ success: true });
 }
 
-async function handleDeleteTransaction(request, transactionId) {
+async function handleDeleteTransaction(request: NextRequest, transactionId: string): Promise<NextResponse> {
   const db = await connectDB();
-  const result = await db.collection('transactions').deleteOne({ id: transactionId });
+  const result = await db.collection<Transaction>('transactions').deleteOne({ id: transactionId } as any);
   
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
@@ -306,14 +378,14 @@ async function handleDeleteTransaction(request, transactionId) {
 }
 
 // Analytics endpoints
-async function handleGetAnalytics(request) {
+async function handleGetAnalytics(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
   const branchId = searchParams.get('branchId');
   const startDate = searchParams.get('startDate');
   const endDate = searchParams.get('endDate');
 
   const db = await connectDB();
-  const query = {};
+  const query: any = {};
   
   if (branchId) {
     query.branchId = branchId;
@@ -325,7 +397,7 @@ async function handleGetAnalytics(request) {
     if (endDate) query.date.$lte = endDate;
   }
 
-  const transactions = await db.collection('transactions').find(query).toArray();
+  const transactions = await db.collection<Transaction>('transactions').find(query).toArray();
   
   // Calculate totals
   const totalIncome = transactions
@@ -339,20 +411,24 @@ async function handleGetAnalytics(request) {
   const balance = totalIncome - totalExpense;
 
   // Income by method
-  const incomeByMethod = transactions
+  const incomeByMethod: Record<string, number> = transactions
     .filter(t => t.type === 'income')
     .reduce((acc, t) => {
-      acc[t.method] = (acc[t.method] || 0) + t.amount;
+      if (t.method) {
+        acc[t.method] = (acc[t.method] || 0) + t.amount;
+      }
       return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
   // Expense by category
-  const expenseByCategory = transactions
+  const expenseByCategory: Record<string, number> = transactions
     .filter(t => t.type === 'expense')
     .reduce((acc, t) => {
-      acc[t.category] = (acc[t.category] || 0) + t.amount;
+      if (t.category) {
+        acc[t.category] = (acc[t.category] || 0) + t.amount;
+      }
       return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
   // Daily totals
   const dailyData = transactions.reduce((acc, t) => {
@@ -365,7 +441,7 @@ async function handleGetAnalytics(request) {
       acc[t.date].expense += t.amount;
     }
     return acc;
-  }, {});
+  }, {} as Record<string, { date: string; income: number; expense: number; balance: number }>);
 
   // Calculate cumulative balance for each day
   const dailyArray = Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
@@ -386,18 +462,18 @@ async function handleGetAnalytics(request) {
 }
 
 // Initialize default data
-async function handleInitialize() {
+async function handleInitialize(): Promise<NextResponse> {
   const db = await connectDB();
   
   // Check if already initialized
-  const existingUsers = await db.collection('users').countDocuments();
+  const existingUsers = await db.collection<User>('users').countDocuments();
   if (existingUsers > 0) {
     return NextResponse.json({ message: 'Already initialized' });
   }
 
   // Create default admin
   const hashedPassword = await bcrypt.hash('admin123', 10);
-  const admin = {
+  const admin: User = {
     id: uuidv4(),
     name: 'Admin User',
     email: 'admin@company.com',
@@ -407,10 +483,10 @@ async function handleInitialize() {
     createdAt: new Date().toISOString(),
   };
 
-  await db.collection('users').insertOne(admin);
+  await db.collection<User>('users').insertOne(admin as any);
 
   // Create default branches
-  const branches = [
+  const branches: Branch[] = [
     {
       id: uuidv4(),
       name: 'Main Branch',
@@ -427,21 +503,21 @@ async function handleInitialize() {
     },
   ];
 
-  await db.collection('branches').insertMany(branches);
+  await db.collection<Branch>('branches').insertMany(branches as any);
 
   // Create a manager for each branch
   const managerPassword = await bcrypt.hash('manager123', 10);
-  const managers = branches.map((branch, index) => ({
+  const managers: User[] = branches.map((branch, index) => ({
     id: uuidv4(),
     name: `Manager ${index + 1}`,
     email: `manager${index + 1}@company.com`,
     password: managerPassword,
-    role: 'manager',
+    role: 'manager' as const,
     branchId: branch.id,
     createdAt: new Date().toISOString(),
   }));
 
-  await db.collection('users').insertMany(managers);
+  await db.collection<User>('users').insertMany(managers as any);
 
   return NextResponse.json({ 
     message: 'Initialized successfully',
@@ -453,7 +529,10 @@ async function handleInitialize() {
 }
 
 // Main route handler
-export async function GET(request, { params }) {
+export async function GET(
+  request: NextRequest, 
+  { params }: { params: { path?: string[] } }
+): Promise<NextResponse> {
   try {
     const path = params?.path || [];
     const route = path.join('/');
@@ -486,11 +565,17 @@ export async function GET(request, { params }) {
     return NextResponse.json({ message: 'API is running' });
   } catch (error) {
     console.error('API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' }, 
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(request, { params }) {
+export async function POST(
+  request: NextRequest, 
+  { params }: { params: { path?: string[] } }
+): Promise<NextResponse> {
   try {
     const path = params?.path || [];
     const route = path.join('/');
@@ -514,11 +599,17 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: 'Route not found' }, { status: 404 });
   } catch (error) {
     console.error('API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' }, 
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(request, { params }) {
+export async function PUT(
+  request: NextRequest, 
+  { params }: { params: { path?: string[] } }
+): Promise<NextResponse> {
   try {
     const path = params?.path || [];
     const route = path.join('/');
@@ -541,11 +632,17 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ error: 'Route not found' }, { status: 404 });
   } catch (error) {
     console.error('API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' }, 
+      { status: 500 }
+    );
   }
 }
 
-export async function DELETE(request, { params }) {
+export async function DELETE(
+  request: NextRequest, 
+  { params }: { params: { path?: string[] } }
+): Promise<NextResponse> {
   try {
     const path = params?.path || [];
     const route = path.join('/');
@@ -568,6 +665,9 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ error: 'Route not found' }, { status: 404 });
   } catch (error) {
     console.error('API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' }, 
+      { status: 500 }
+    );
   }
 }
