@@ -682,8 +682,8 @@ function AddTransactionDialog({ currentUser, branches, selectedDate }: AddTransa
   );
 }
 
-function ReportsTab({ currentUser, startDate, endDate, setStartDate, setEndDate }) {
-  const [selectedBranchId, setSelectedBranchId] = useState(currentUser.branchId || 'all');
+function ReportsTab({ currentUser, startDate, endDate, setStartDate, setEndDate }: ReportsTabProps) {
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(currentUser.branchId || 'all');
 
   // Fetch branches
   const { data: branchesData } = useQuery<BranchesResponse>({
