@@ -276,7 +276,7 @@ function DashboardTab({ currentUser, selectedDate, setSelectedDate }: DashboardT
   const { toast } = useToast();
 
   // Fetch branches
-  const { data: branchesData } = useQuery({
+  const { data: branchesData } = useQuery<BranchesResponse>({
     queryKey: ['branches'],
     queryFn: async () => {
       const response = await fetch('/api/branches');
@@ -284,7 +284,7 @@ function DashboardTab({ currentUser, selectedDate, setSelectedDate }: DashboardT
     },
   });
 
-  const branches = branchesData?.branches || [];
+  const branches: Branch[] = branchesData?.branches || [];
 
   // Fetch transactions for selected date and branch
   const selectedBranchId = currentUser.role === 'manager' ? currentUser.branchId : null;
