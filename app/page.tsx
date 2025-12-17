@@ -152,7 +152,7 @@ function ExpenseTrackerApp() {
   );
 }
 
-function LoginScreen({ onLogin }) {
+function LoginScreen({ onLogin }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
