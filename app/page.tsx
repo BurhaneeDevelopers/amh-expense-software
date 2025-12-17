@@ -1036,7 +1036,7 @@ function UsersManagement() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: usersData } = useQuery({
+  const { data: usersData } = useQuery<UsersResponse>({
     queryKey: ['users'],
     queryFn: async () => {
       const response = await fetch('/api/users');
@@ -1044,7 +1044,7 @@ function UsersManagement() {
     },
   });
 
-  const { data: branchesData } = useQuery({
+  const { data: branchesData } = useQuery<BranchesResponse>({
     queryKey: ['branches'],
     queryFn: async () => {
       const response = await fetch('/api/branches');
@@ -1052,8 +1052,8 @@ function UsersManagement() {
     },
   });
 
-  const users = usersData?.users || [];
-  const branches = branchesData?.branches || [];
+  const users: UserWithoutPassword[] = usersData?.users || [];
+  const branches: Branch[] = branchesData?.branches || [];
 
   const getBranchName = (branchId) => {
     const branch = branches.find(b => b.id === branchId);
