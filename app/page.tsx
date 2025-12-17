@@ -501,7 +501,7 @@ function TransactionsTable({ transactions }: TransactionsTableProps) {
   );
 }
 
-function AddTransactionDialog({ currentUser, branches, selectedDate }) {
+function AddTransactionDialog({ currentUser, branches, selectedDate }: AddTransactionDialogProps) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState('income');
   const [amount, setAmount] = useState('');
