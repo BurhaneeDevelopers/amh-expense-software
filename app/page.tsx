@@ -57,7 +57,7 @@ function ExpenseTrackerApp() {
     }
   }, []);
 
-  const handleLogin = (user) => {
+  const handleLogin = (user: UserWithoutPassword) => {
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
   };
