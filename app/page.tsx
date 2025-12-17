@@ -502,13 +502,13 @@ function TransactionsTable({ transactions }: TransactionsTableProps) {
 }
 
 function AddTransactionDialog({ currentUser, branches, selectedDate }: AddTransactionDialogProps) {
-  const [open, setOpen] = useState(false);
-  const [type, setType] = useState('income');
-  const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('cash');
-  const [category, setCategory] = useState('Other');
-  const [note, setNote] = useState('');
-  const [branchId, setBranchId] = useState(currentUser.branchId || '');
+  const [open, setOpen] = useState<boolean>(false);
+  const [type, setType] = useState<'income' | 'expense'>('income');
+  const [amount, setAmount] = useState<string>('');
+  const [method, setMethod] = useState<PaymentMethod>('cash');
+  const [category, setCategory] = useState<ExpenseCategory>('Other');
+  const [note, setNote] = useState<string>('');
+  const [branchId, setBranchId] = useState<string>(currentUser.branchId || '');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
