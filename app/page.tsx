@@ -271,7 +271,7 @@ function LoginScreen({ onLogin }: LoginScreenProps) {
   );
 }
 
-function DashboardTab({ currentUser, selectedDate, setSelectedDate }) {
+function DashboardTab({ currentUser, selectedDate, setSelectedDate }: DashboardTabProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
