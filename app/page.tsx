@@ -697,7 +697,7 @@ function ReportsTab({ currentUser, startDate, endDate, setStartDate, setEndDate 
   const branches: Branch[] = branchesData?.branches || [];
 
   // Fetch analytics
-  const { data: analyticsData, isLoading } = useQuery({
+  const { data: analyticsData, isLoading } = useQuery<AnalyticsData>({
     queryKey: ['analytics', startDate, endDate, selectedBranchId],
     queryFn: async () => {
       let url = `/api/analytics?startDate=${startDate}&endDate=${endDate}`;
@@ -709,7 +709,7 @@ function ReportsTab({ currentUser, startDate, endDate, setStartDate, setEndDate 
     },
   });
 
-  const analytics = analyticsData || {
+  const analytics: AnalyticsData = analyticsData || {
     totalIncome: 0,
     totalExpense: 0,
     balance: 0,
