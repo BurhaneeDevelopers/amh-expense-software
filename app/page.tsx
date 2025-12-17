@@ -896,8 +896,8 @@ function ReportsTab({ currentUser, startDate, endDate, setStartDate, setEndDate 
   );
 }
 
-function AdminPanel({ currentUser }) {
-  const [activeTab, setActiveTab] = useState('branches');
+function AdminPanel({ currentUser }: AdminPanelProps) {
+  const [activeTab, setActiveTab] = useState<'branches' | 'users'>('branches');
 
   return (
     <div className="space-y-6">
