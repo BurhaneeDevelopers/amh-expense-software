@@ -16,14 +16,34 @@ import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Building2, Users, TrendingUp, TrendingDown, Wallet, Calendar, Plus, LogOut, BarChart3, Edit, Trash2, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import type {
+  UserWithoutPassword,
+  Branch,
+  Transaction,
+  PaymentMethod,
+  ExpenseCategory,
+  BranchesResponse,
+  TransactionsResponse,
+  AnalyticsData,
+  UsersResponse,
+  LoginResponse,
+  TransactionResponse,
+  DashboardTabProps,
+  ReportsTabProps,
+  AdminPanelProps,
+  AddTransactionDialogProps,
+  TransactionsTableProps,
+  AddUserDialogProps,
+  LoginScreenProps,
+} from '@/types';
 
 const queryClient = new QueryClient();
 
-const PAYMENT_METHODS = ['cash', 'gpay', 'bank_transfer'];
-const EXPENSE_CATEGORIES = ['Rent', 'Utilities', 'Salaries', 'Supplies', 'Maintenance', 'Transportation', 'Marketing', 'Other'];
+const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'gpay', 'bank_transfer'];
+const EXPENSE_CATEGORIES: ExpenseCategory[] = ['Rent', 'Utilities', 'Salaries', 'Supplies', 'Maintenance', 'Transportation', 'Marketing', 'Other'];
 
 function ExpenseTrackerApp() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<UserWithoutPassword | null>(null);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
